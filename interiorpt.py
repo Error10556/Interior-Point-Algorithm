@@ -130,11 +130,22 @@ def find_max(objective, x):
     return ans
 
 
-def display(horizontal_vec, n):
+def display(vertical_vec, n):
     s = ''
     for i in range(n):
-        s += horizontal_vec[i] + ' '
+        s += vertical_vec[i, 0] + ' '
+    print(s)
     return s
+
+
+def check_applicability(answer):
+    if answer[0] == UNBOUNDED:
+        print("The problem does not have solution!")
+        return False
+    if answer[0] == UNSOLVABLE:
+        print("The method is not applicable!")
+        return False
+    return True
 
 
 def main():
@@ -153,25 +164,21 @@ def main():
     initialsol = np.matrix(inp).T
 
     inp = input('Vector of right-hand side numbers: ')
-    right_hand_side = np.matrix(inp).T
+    right_hand_side = ';'.join(input() for i in range(constraint_count))
 
     eps = int(input())
     alpha05 = 0.5
     alpha09 = 0.9
 
     answer_alpha05 = interior_solve(objective, constraints, initialsol, alpha05, eps)
-
-    if answer_alpha05[0] == UNBOUNDED:
-        return "The problem does not have solution!"
-    if answer_alpha05[0] == UNSOLVABLE:
-        return "The method is not applicable!"
-
-    print('Alpha = 0.5: x* =', answer_alpha05[1])
-    print('max:', find_max(objective, display(answer_alpha05[1], n)))
+    if check_applicability(answer_alpha05):
+        print('Alpha = 0.5: x* =', display(answer_alpha05[1], n))
+        print('max:', find_max(objective, answer_alpha05[1]))
 
     answer_alpha09 = interior_solve(objective, constraints, initialsol, alpha09, eps)
-    print('Alpha = 0.9: x* =', answer_alpha09[1])
-    print(find_max(objective, display(answer_alpha09[1], n)))
+    if check_applicability(answer_alpha09):
+        print('Alpha = 0.9: x* =', display(answer_alpha09[1], n))
+        print(find_max(objective, answer_alpha09[1]))
 
     run_simplex(objective, nvars, constraints, right_hand_side, eps)
 
