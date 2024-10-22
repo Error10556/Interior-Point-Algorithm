@@ -139,21 +139,21 @@ def display(horizontal_vec, n):
 
 def main():
     inp = input('Vector of coefficients of objective function: ')
-    objective = np.array(inp).T
+    objective = np.matrix(inp).T
     n = len(inp.split())
 
+    constraint_count = int(input('Input number of constraints: '))
     print('Matrix of coefficients of constraints: ')
-    constraint_count = int(input())
     in_constraints = ';'.join(input() for i in range(constraint_count))
 
     constraints = np.matrix(in_constraints)
     nvars = constraints.shape[1]
 
     inp = input('Initial starting point: ')
-    initialsol = np.array(inp).T
+    initialsol = np.matrix(inp).T
 
     inp = input('Vector of right-hand side numbers: ')
-    right_hand_side = np.array(inp).T
+    right_hand_side = np.matrix(inp).T
 
     eps = int(input())
     alpha05 = 0.5
