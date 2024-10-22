@@ -99,21 +99,21 @@ def interior_solve(objective, constraints, initialsol, alpha, eps):
     a = constraints
     x = initialsol
     solved = False
-    eye = np.eye(c.shape[1])
+    eye = np.eye(c.shape[0])
     onevector = np.matrix('; '.join('1' * x.shape[0]))
     while not solved:
-        diag = np.diag(x)
+        diag = np.diag(x.A1)
         a_ = a * diag
         c_ = diag * c
         a_t = a_.transpose()
         p = eye - a_t * inv(a_ * a_t) * a_
         cp = p * c_
         nu = max(-i for i in cp.A1)
-        if nu <= eps:
+        if nu <= 0:
             return (UNSOLVABLE,)
         newx = diag * (onevector + alpha / nu * cp)
         diff = newx - x
-        absdiff = (diff.transpose() * diff).A1[0]
+        absdiff = max(abs(i) for i in diff.A1)
         if absdiff < eps:
             solved = True
         x = newx
