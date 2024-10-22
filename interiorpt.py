@@ -143,10 +143,8 @@ def main():
     n = len(inp.split())
 
     print('Matrix of coefficients of constraints: ')
-    in_constraints = ''
-    for i in range(n):
-        in_constraints += (i != n - 1) ? input() + '; ' : input()
-    print(in_constraints)
+    constraint_count = int(input())
+    in_constraints = ';'.join(input() for i in range(constraint_count))
 
     constraints = np.matrix(in_constraints)
     nvars = constraints.shape[1]
