@@ -1,6 +1,8 @@
 for testfile in tests/test*.txt
 do
-    echo Running ${${testfile##*'/'}#.}
-    python main.py < testfile
-    echo "\n\n"
+    base=${testfile##*'/'}
+    echo Running ${base%%.*}
+    python main.py < $testfile
+    echo
+    echo
 done
