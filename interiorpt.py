@@ -7,6 +7,85 @@ UNSOLVABLE = 2
 UNBOUNDED = 3
 
 
+def get_best(array, condition=lambda x: True):
+    filtered = [i for i in range(len(array)) if condition(array[i])]
+    if not filtered:
+        return None
+    return min(filtered, key=lambda i: array[i])
+
+
+def normalize_row(mat, row, col):
+    mat[row] /= mat[row][col]
+
+
+def add_row(mat, source_row, target_row, multiplier):
+    mat[target_row] += mat[source_row] * multiplier
+
+
+def simplex(mat, eps):
+    h, w = mat.shape
+    fracs = np.zeros(h - 1)
+    basic = np.arange(h - 1) + h - 1
+
+    while True:
+        col = get_best(mat[0], lambda x: x < -eps)
+        if col is None or mat[0][col] > -eps:
+            break
+
+        for i in range(h - 1):
+            sol = mat[i + 1][w - 1]
+            divisor = mat[i + 1][col]
+            if 0 <= sol <= eps and divisor < 0:
+                fracs[i] = -1
+            else:
+                fracs[i] = sol / divisor
+
+        row = get_best(fracs, lambda a: 0 <= a <= 1e9)
+
+        if row is None or row == h - 1:
+            return (UNSOLVABLE,)
+
+        basic[row] = col
+        row += 1
+
+        normalize_row(mat, row, col)
+
+        for i in range(h):
+            if i == row:
+                continue
+            add_row(mat, row, i, -mat[i][col])
+
+        solcell = mat[0][w - 1]
+        if not np.isfinite(solcell) or solcell >= 1e9:
+            return (UNBOUNDED,)
+
+    return SOLVED, sol
+
+
+def run_simplex(mat, eps, nvars):
+    basic = []
+    solver_state = simplex(mat, eps)
+
+    if solver_state != SOLVED:
+        print("The method is not applicable!")
+        return 0
+
+    vals = np.zeros(nvars)
+
+    for i in range(len(basic)):
+        if basic[i] < nvars:
+            vals[basic[i]] = mat[i + 1][-1]
+
+    print("Simplex: (", end="")
+    for i in range(nvars):
+        print(vals[i], end="")
+        if i < nvars - 1:
+            print(", ", end="")
+    print(")")
+
+    print("Simplex:", mat[0][-1])
+
+
 def interior_solve(objective, constraints, initialsol, alpha, eps):
     c = objective
     a = constraints
@@ -32,4 +111,40 @@ def interior_solve(objective, constraints, initialsol, alpha, eps):
         x = newx
         if (x.transpose() * x).A1[0] > 1e9:
             return (UNBOUNDED,)
-    return (SOLVED, x)
+    return SOLVED, x
+
+
+def main():
+    inp = input('Vector of coefficients of objective function: ')
+    objective = np.array(inp).T
+    n = len(inp.split())
+
+    print('Matrix of coefficients of constraints: ')
+    constraints = ''
+    for i in range(n):
+        constraints += input() + '; '
+    constraints = np.matrix(constraints)
+    nvars = constraints.shape[1]
+
+    inp = input('Initial starting point: ')
+    initialsol = np.array(inp).T
+
+    inp = input('Vector of right-hand side numbers: ')
+    right_hand_side = np.array(inp).T
+
+    eps = int(input())
+    alpha05 = 0.5
+    alpha09 = 0.9
+
+    answer_alpha05 = interior_solve(objective, constraints, initialsol, alpha05, eps)
+
+    if answer_alpha05[0] == UNBOUNDED:
+        return "The problem does not have solution!"
+    if answer_alpha05[0] == UNSOLVABLE:
+        return "The method is not applicable!"
+
+    answer_alpha09 = interior_solve(objective, constraints, initialsol, alpha09, eps)
+
+
+if __name__ == "__main__":
+    main()
