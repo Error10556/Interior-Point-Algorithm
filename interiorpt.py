@@ -9,6 +9,11 @@ UNBOUNDED = 3
 DEFAULT_EPS = 1e-7
 
 
+def vectorAsTuple(vec):
+    return tuple(round(i, 3) for i in (vec.A1 if
+                 isinstance(vec, np.matrix) else vec))
+
+
 def get_best(array, condition=lambda x: True):
     filtered = [i for i in range(len(array)) if condition(array[i])]
     if not filtered:
@@ -18,6 +23,7 @@ def get_best(array, condition=lambda x: True):
 
 def normalize_row(mat, row, col):
     mat[row] /= mat[row, col]
+    pass
 
 
 def add_row(mat, source_row, target_row, multiplier):
@@ -55,9 +61,9 @@ def simplex(mat, eps):
         for i in range(h):
             if i == row:
                 continue
-            add_row(mat, row, i, -mat[i][col])
+            add_row(mat, row, i, -mat[i, col])
 
-        solcell = mat[0][-1]
+        solcell = mat[0, -1]
         if not np.isfinite(solcell) or solcell >= 1e9:
             return (UNBOUNDED,)
 
@@ -65,11 +71,12 @@ def simplex(mat, eps):
 
 
 def run_simplex(objective, mat, rhs_values, eps):
+    print("Simplex:")
     obj = objective
     nconstraints, nvars = mat.shape
     _mat = mat
 
-    mat = np.matrix([[0] * (nvars + 1) for i in range(nconstraints + 1)])
+    mat = np.matrix([[0.0] * (nvars + 1) for i in range(nconstraints + 1)])
     for i in range(nvars):
         mat[0, i] = -obj[i, 0]
     for i in range(nconstraints):
@@ -78,11 +85,13 @@ def run_simplex(objective, mat, rhs_values, eps):
     for i in range(1, nconstraints + 1):
         mat[i, -1] = rhs_values[i - 1, 0]
 
-    solver_state, mat, basic = simplex(mat, eps)
+    solver_state, *results = simplex(mat, eps)
 
     if solver_state != SOLVED:
         print("The method is not applicable!")
         return
+
+    mat, basic = results
 
     vals = np.zeros(nvars)
 
@@ -90,10 +99,8 @@ def run_simplex(objective, mat, rhs_values, eps):
         if basic[i] < nvars:
             vals[basic[i]] = mat[i + 1, -1]
 
-    print("Simplex - x*: (", end="")
-    print(", ".join(map(str, vals)), end=")\n")
-
-    print("Simplex - max value:", mat[0, -1])
+    print('x*:', vectorAsTuple(vals))
+    print("Max value:", round(mat[0, -1], 3))
 
 
 def interior_solve(objective, constraints, initialsol, alpha, eps):
@@ -102,7 +109,7 @@ def interior_solve(objective, constraints, initialsol, alpha, eps):
     x = initialsol
     solved = False
     eye = np.eye(c.shape[0])
-    onevector = np.matrix('; '.join('1' * x.shape[0]))
+    onevector = np.matrix('; '.join('1' * x.shape[0]), float)
     while not solved:
         diag = np.diag(x.A1)
         a_ = a * diag
@@ -128,10 +135,6 @@ def find_max(objective, x):
     return round((objective.T * x).A1[0], 3)
 
 
-def display(vertical_vec, n):
-    return tuple(round(i, 3) for i in vertical_vec.A1)
-
-
 def check_applicability(answer):
     if answer[0] == UNBOUNDED:
         print("The problem does not have solution!")
@@ -144,34 +147,41 @@ def check_applicability(answer):
 
 def main():
     inp = input('Vector of coefficients of objective function: ')
-    objective = np.matrix(inp).T
+    objective = np.matrix(inp, float).T
     n = len(inp.split())
 
     constraint_count = int(input('Input number of constraints: '))
     print('Matrix of coefficients of constraints: ')
     in_constraints = ';'.join(input() for i in range(constraint_count))
 
-    constraints = np.matrix(in_constraints)
+    constraints = np.matrix(in_constraints, float)
 
     inp = input('Initial starting point: ')
-    initialsol = np.matrix(inp).T
+    initialsol = np.matrix(inp, float).T
 
     inp = input('Vector of right-hand side numbers: ')
-    right_hand_side = np.matrix(inp).T
+    right_hand_side = np.matrix(inp, float).T
 
     eps = float(input("Epsilon: "))
     alpha05 = 0.5
     alpha09 = 0.9
 
-    answer_alpha05 = interior_solve(objective, constraints, initialsol, alpha05, eps)
-    if check_applicability(answer_alpha05):
-        print('\nAlpha = 0.5: x* =', display(answer_alpha05[1], n))
-        print('max:', find_max(objective, answer_alpha05[1]))
+    print()
 
-    answer_alpha09 = interior_solve(objective, constraints, initialsol, alpha09, eps)
-    if check_applicability(answer_alpha09):
-        print('\nAlpha = 0.9: x* =', display(answer_alpha09[1], n))
-        print(find_max(objective, answer_alpha09[1]))
+    error = constraints * initialsol - right_hand_side
+    if max(abs(i) for i in error.A1) > eps:
+        print('The vector', vectorAsTuple(initialsol), 'is not a solution!')
+    else:
+        answer_alpha05 = interior_solve(objective, constraints,
+                                        initialsol, alpha05, eps)
+        if check_applicability(answer_alpha05):
+            print('Alpha = 0.5: x* =', vectorAsTuple(answer_alpha05[1]))
+            print('max:', find_max(objective, answer_alpha05[1]))
+        answer_alpha09 = interior_solve(objective, constraints,
+                                        initialsol, alpha09, eps)
+        if check_applicability(answer_alpha09):
+            print('Alpha = 0.9: x* =', vectorAsTuple(answer_alpha09[1]))
+            print("max:", find_max(objective, answer_alpha09[1]))
 
     run_simplex(objective, constraints, right_hand_side, eps)
 
